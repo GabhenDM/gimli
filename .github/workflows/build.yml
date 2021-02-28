@@ -1,6 +1,4 @@
 on:
-  # Trigger analysis when pushing in master or pull requests, and when creating
-  # a pull request. 
   push:
     branches:
       - master
@@ -8,12 +6,19 @@ on:
       types: [opened, synchronize, reopened]
 name: Main Workflow
 jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: gitleaks-action
+      uses: zricethezav/gitleaks-action@master
   sonarcloud:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
       with:
-        # Disabling shallow clone is recommended for improving relevancy of reporting
         fetch-depth: 0
     - name: SonarCloud Scan
       uses: sonarsource/sonarcloud-github-action@master
