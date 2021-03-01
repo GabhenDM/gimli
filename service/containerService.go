@@ -7,45 +7,59 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ahmetalpbalkan/dlog"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"github.com/gabhendm/gimli/utils"
 )
 
-func StartContainer(imageURL string, cmd []string) {
+func StartContainer(imageURL string, cmd []string, debugFlag bool) (io.Reader, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	reader, err := cli.ImagePull(ctx, imageURL, types.ImagePullOptions{})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	io.Copy(os.Stdout, reader)
+	if debugFlag {
+		io.Copy(os.Stdout, reader)
+	}
+
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: imageURL,
 		Cmd:   cmd,
 		Tty:   false,
-	}, nil, nil, nil, "")
+	}, nil, nil, nil, utils.CreateContainerName(imageURL))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	case <-statusCh:
+	}
+
+	if debugFlag {
+		out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		if err != nil {
+			return nil, err
+		}
+		stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+
 	}
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
@@ -53,7 +67,14 @@ func StartContainer(imageURL string, cmd []string) {
 		panic(err)
 	}
 
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	r := dlog.NewReader(out)
+
+	if err = cli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{}); err != nil {
+		return nil, err
+	}
+	fmt.Println(fmt.Sprintf("Container: %s - Finished Executing...", utils.CreateContainerName(imageURL)))
+
+	return r, nil
 }
 
 func StartContainerDetached(imageURL string, cmd []string, portBindingHost string, portBindingContainer string, debugFlag bool) (container.ContainerCreateCreatedBody, error) {
@@ -80,8 +101,7 @@ func StartContainerDetached(imageURL string, cmd []string, portBindingHost strin
 	if debugFlag {
 		io.Copy(os.Stdout, out)
 	}
-	containerName := fmt.Sprintf("gimli-%s", imageURL)
-	resp, err := cli.ContainerCreate(ctx, containerConfig, containerHostConfig, nil, nil, containerName)
+	resp, err := cli.ContainerCreate(ctx, containerConfig, containerHostConfig, nil, nil, utils.CreateContainerName(imageURL))
 	if err != nil {
 		panic(err)
 	}
@@ -125,7 +145,7 @@ func RemoveRunningContainers() error {
 		return err
 	}
 
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return err
 	}

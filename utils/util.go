@@ -25,3 +25,13 @@ func BindFlags(cmd *cobra.Command, v *viper.Viper, envPrefix string) {
 		}
 	})
 }
+
+func CreateContainerName(imageURL string) string {
+	var containerName string
+	if strings.Contains(imageURL, "/") {
+		containerName = fmt.Sprintf("gimli-%s", strings.Split(imageURL, "/")[1])
+	} else {
+		containerName = fmt.Sprintf("gimli-%s", imageURL)
+	}
+	return containerName
+}

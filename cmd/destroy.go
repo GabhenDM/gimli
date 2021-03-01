@@ -11,6 +11,7 @@ func init() {
 	rootCmd.AddCommand(DestroyCmd)
 }
 
+// DestroyCmd is used to Destroy all Service Containers
 var DestroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Destroy Gimli Infrastucture Containers",

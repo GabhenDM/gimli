@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListContainersCmd is used to List all running Containers
 var ListContainersCmd = &cobra.Command{
 	Use:   "list-containers",
 	Short: "List all running containers",

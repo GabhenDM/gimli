@@ -35,6 +35,7 @@ var (
 	}
 )
 
+//Execute is used to bootstrap commands tree
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -46,12 +47,12 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gimli.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Debug Output Flag (True or False)")
-
 }
 
 func initializeConfig(cmd *cobra.Command) error {
 	v := viper.New()
 	v.SetConfigType("yaml")
+
 	if cfgFile == "" {
 		v.AddConfigPath("$HOME/")
 		v.SetConfigName(".gimli")

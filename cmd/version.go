@@ -12,6 +12,7 @@ func init() {
 
 }
 
+// VersionCmd is utilized to print the currently installed Gimli Version
 var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number of Gimli",
